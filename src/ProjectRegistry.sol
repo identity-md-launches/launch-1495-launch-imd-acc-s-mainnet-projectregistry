@@ -169,6 +169,7 @@ contract ProjectRegistry is OracleAttestationConsumer, ReentrancyGuard {
     event BondClaimed(address indexed recipient, address indexed to, uint256 amount);
 
     error ZeroAddress();
+    error InvalidBeneficiary();
     error NotAContract();
     error RateOutOfRange(uint16 rateBps);
     error BadText();
@@ -265,6 +266,8 @@ contract ProjectRegistry is OracleAttestationConsumer, ReentrancyGuard {
         if (project == address(0) || beneficiary == address(0)) {
             revert ZeroAddress();
         }
+        // A defended bond sent here would be an unrecoverable token self-transfer.
+        if (beneficiary == address(this)) revert InvalidBeneficiary();
         if (project.code.length == 0) revert NotAContract();
         address owner_ = projectOwner(project);
         if (owner_ != address(0) && msg.sender != owner_ && msg.sender != project) {
@@ -516,6 +519,7 @@ contract ProjectRegistry is OracleAttestationConsumer, ReentrancyGuard {
         if (p.ask != Ask.None) revert AskOpen();
         if (msg.sender != p.beneficiary) revert NotBeneficiary();
         if (beneficiary == address(0)) revert ZeroAddress();
+        if (beneficiary == address(this)) revert InvalidBeneficiary();
         if (beneficiary != p.beneficiary) {
             uint64 openAt = handoffOpenAt[project];
             if (block.timestamp < openAt) revert HandoffTooSoon(openAt);
